@@ -1,6 +1,7 @@
+mod utils;
+
 use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
-use serde_json::json;
 use std::thread;
 
 fn listen_on(port: u16) -> TcpListener {
@@ -13,6 +14,7 @@ fn main() -> std::io::Result<()> {
         match stream {
             Ok(stream) => {
                 // Spawn a new thread to handle each client
+                //TODO possible implementation of shared thread
                 thread::spawn(move || handle_client(stream));
             }
             Err(e) => {
@@ -30,21 +32,24 @@ fn handle_client(mut stream: TcpStream) {
     let request = String::from_utf8_lossy(&buffer[..]);
     println!("Received request: {}", request);
 
-    // Create a JSON response
-    let response_body = json!({ "body": "helloWorld" });
-    let response_json = response_body.to_string();
+    let mut response_headers = utils::http::HttpHeaders::new();
+    response_headers.add_header("Content-Type", "application/json");
 
-    // Create the full HTTP response
-    let response = format!(
-        "HTTP/1.1 200 OK\r\n\
-         Content-Type: application/json\r\n\
-         Content-Length: {}\r\n\
-         \r\n\
-         {}",
-        response_json.len(),
-        response_json
+    // Create the response body
+    let response_body = utils::http::HttpBody::Json(r#"{"status": "success"}"#.to_string());
+
+    // Create an HTTP response
+    let response = utils::http::HttpResponse::new(
+        utils::http::HttpVersion::HTTP20, // provide req analysis to res with same http version?
+        200,
+        "OK",
+        response_headers,
+        response_body,
     );
 
+    //println
+    println!("HTTP Response: {:#?}", response);
+
     // Write the response back to the client
-    stream.write_all(response.as_bytes()).expect("Failed to write response!");
+    stream.write_all(response.as_string().as_bytes()).expect("Failed to write response!");
 }
