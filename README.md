@@ -4,7 +4,7 @@ This project implements a basic TCP server in Rust using `TcpListener` and an as
 
 ## Features
 
-- **Asynchronous Response Handling**: The server uses async/await to handle multiple connections concurrently.
+- **Asynchronous Response Handling**: The server uses async/await to handle multiple connections concurrently with shared thread.
 - **Queue-based Infrastructure**: Incoming requests are queued and processed in an orderly fashion, making it easy to manage multiple clients.
 - **TCP Listener**: Listens for connections on a specified port and serves responses.
 
