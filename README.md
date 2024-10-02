@@ -1,4 +1,4 @@
-# Rust TCP Server with Async Infrastructure
+# Rust TCP Server with classic asynchronous core concept implemented with shared thread spawn into a deterministic thread pool
 
 This project implements a basic TCP server in Rust using `TcpListener` and an asynchronous task queue infrastructure. The server listens for incoming connections and processes each connection asynchronously, responding with a simple message.
 
