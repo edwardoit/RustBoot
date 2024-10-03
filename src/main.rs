@@ -2,7 +2,10 @@ mod utils;
 
 use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
-use std::thread;
+use std::sync::Arc;
+use std::sync::Mutex;
+use threadpool::ThreadPool;
+use utils::queue::Queue;
 
 fn listen_on(port: u16) -> TcpListener {
     TcpListener::bind(("127.0.0.1", port)).unwrap()
@@ -10,12 +13,28 @@ fn listen_on(port: u16) -> TcpListener {
 
 fn main() -> std::io::Result<()> {
     let listener = listen_on(8080);
+
+    //queue
+    let queue = Arc::new(Mutex::new(Queue::new()));
+
+    // Create a thread pool with 4 worker threads
+    let pool = ThreadPool::new(4);
+
+    // Arc and Mutex safe concurrent
+    let pool = Arc::new(Mutex::new(pool));
+
     for stream in listener.incoming() {
         match stream {
             Ok(stream) => {
-                // Spawn a new thread to handle each client
-                //TODO possible implementation of shared thread
-                thread::spawn(move || handle_client(stream));
+                let pool = Arc::clone(&pool);
+                let queue = Arc::clone(&queue);
+                // Safe multi_threaded execution using a thread pool
+                pool.lock().unwrap().execute(move || {
+                    let mut q = queue.lock().unwrap();
+                    q.push(move || {
+                        handle_client(stream); // Push the closure
+                    });
+                });
             }
             Err(e) => {
                 eprintln!("Failed to establish connection: {}", e);
