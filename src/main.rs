@@ -4,6 +4,7 @@ use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::sync::Arc;
 use std::sync::Mutex;
+use std::thread;
 use threadpool::ThreadPool;
 use utils::queue::Queue;
 
@@ -16,9 +17,9 @@ fn main() -> std::io::Result<()> {
 
     //queue
     let queue = Arc::new(Mutex::new(Queue::new()));
-
+    start_worker(Arc::clone(&queue));
     // Create a thread pool with 4 worker threads
-    let pool = ThreadPool::new(4);
+    let pool = ThreadPool::new(4); //4 thread + 1 thread consumer map on OS thread using start worker
 
     // Arc and Mutex safe concurrent
     let pool = Arc::new(Mutex::new(pool));
@@ -71,4 +72,20 @@ fn handle_client(mut stream: TcpStream) {
 
     // Write the response back to the client
     stream.write_all(response.as_string().as_bytes()).expect("Failed to write response!");
+}
+
+
+fn start_worker(queue: Arc<Mutex<Queue>>) {
+    thread::spawn(move || loop {
+        let task_opt = {
+            let mut q = queue.lock().unwrap();
+            q.pop()
+        };
+
+        if let Some(task) = task_opt {
+            task(); 
+        } else {
+            thread::sleep(std::time::Duration::from_millis(5)); 
+        }
+    });
 }
